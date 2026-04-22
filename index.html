@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Meds" />
+<link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Meds%22%2C%22short_name%22%3A%22Meds%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230b1020%22%2C%22theme_color%22%3A%22%230b1020%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bcharset%3Dutf-8%2C%253Csvg%2520xmlns%253D%2522http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2522%2520viewBox%253D%25220%25200%2520192%2520192%2522%253E%253Crect%2520width%253D%2522192%2522%2520height%253D%2522192%2522%2520rx%253D%252240%2522%2520fill%253D%2522%25230b1020%2522%252F%253E%253Ctext%2520x%253D%252296%2522%2520y%253D%2522128%2522%2520font-size%253D%252296%2522%2520text-anchor%253D%2522middle%2522%2520fill%253D%2522%2523fff%2522%253E%25E2%259C%2585%253C%252Ftext%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D" />
+<title>Meds — adherence tracker</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg-2: #121933;
+    --card: #161e3c;
+    --card-2: #1d2750;
+    --text: #eef1ff;
+    --muted: #9aa3c7;
+    --accent: #7c9cff;
+    --accent-2: #5b7bff;
+    --good: #3ddc97;
+    --warn: #ffc857;
+    --bad: #ff6b6b;
+    --border: rgba(255,255,255,0.08);
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fb;
+      --bg-2: #eef1f8;
+      --card: #ffffff;
+      --card-2: #f3f5fc;
+      --text: #101430;
+      --muted: #5a6286;
+      --accent: #3b62ff;
+      --accent-2: #274ae6;
+      --good: #0aa36b;
+      --warn: #b07500;
+      --bad: #c23b3b;
+      --border: rgba(16,20,48,0.08);
+      --shadow: 0 10px 30px rgba(20,30,80,0.08);
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: radial-gradient(1200px 800px at 80% -10%, rgba(124,156,255,0.18), transparent 60%),
+                radial-gradient(900px 700px at -10% 110%, rgba(61,220,151,0.12), transparent 60%),
+                var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 2px 16px;
+  }
+  .title {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; letter-spacing: -0.02em; font-size: 22px;
+  }
+  .title .dot {
+    width: 10px; height: 10px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--good));
+    box-shadow: 0 0 12px rgba(124,156,255,0.6);
+  }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .btn {
+    appearance: none; border: 0; cursor: pointer;
+    font-weight: 600; font-size: 15px;
+    color: var(--text); background: var(--card);
+    border: 1px solid var(--border);
+    padding: 10px 14px; border-radius: 12px;
+    transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary {
+    color: white;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(91,123,255,0.35);
+  }
+  .btn.ghost { background: transparent; }
+  .btn.icon {
+    padding: 8px 10px; font-size: 14px;
+  }
+
+  .list { display: grid; gap: 12px; }
+  .empty {
+    text-align: center; padding: 40px 16px;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+  }
+  .empty h3 { margin: 0 0 4px; color: var(--text); font-weight: 700; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 14px 12px;
+    box-shadow: var(--shadow);
+    display: grid;
+    gap: 10px;
+  }
+  .card .row1 {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .name {
+    font-weight: 700; font-size: 17px; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
+  }
+  .name .emoji { font-size: 22px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2)); }
+  .name .text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    padding: 5px 9px; border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card-2);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .pill.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); background: color-mix(in srgb, var(--good) 10%, transparent); }
+  .pill.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+  .pill.bad  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 40%, transparent);  background: color-mix(in srgb, var(--bad) 10%, transparent); }
+
+  .status {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .status .box {
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .status .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .status .value { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .status .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .progress {
+    height: 8px; background: var(--card-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .progress > span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--good), var(--accent));
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .progress.warn > span { background: linear-gradient(90deg, var(--warn), var(--accent)); }
+  .progress.bad  > span { background: linear-gradient(90deg, var(--bad), var(--warn)); }
+
+  .actions {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .actions .btn { flex: 1; }
+  .actions .take { flex: 2; }
+
+  /* modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(5,8,20,0.55); backdrop-filter: blur(6px);
+    display: none; align-items: flex-end; justify-content: center; z-index: 100;
+    padding: 16px;
+  }
+  .modal-bg.open { display: flex; }
+  @media (min-width: 520px) {
+    .modal-bg { align-items: center; }
+  }
+  .modal {
+    width: 100%; max-width: 480px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    display: grid; gap: 12px;
+    animation: pop 0.2s ease;
+  }
+  @keyframes pop { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h2 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 13px; color: var(--muted); }
+  .input, .select {
+    width: 100%;
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 12px 12px;
+    font-size: 16px; /* prevents iOS zoom */
+    font-family: inherit;
+  }
+  .input:focus, .select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 0; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 4px; }
+  .modal-actions .left, .modal-actions .right { display: flex; gap: 8px; }
+
+  .emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emoji-picker button {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--card-2); border: 1px solid var(--border);
+    font-size: 20px; cursor: pointer; color: var(--text);
+  }
+  .emoji-picker button.sel { outline: 2px solid var(--accent); outline-offset: 0; }
+
+  footer {
+    text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0 8px;
+  }
+  footer a { color: var(--muted); }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 14px; border-radius: 999px;
+    box-shadow: var(--shadow);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    z-index: 200; font-size: 14px; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  .add-fab {
+    position: sticky; bottom: max(12px, env(safe-area-inset-bottom));
+    display: flex; justify-content: flex-end;
+    padding-top: 16px;
+  }
+  .add-fab .btn.primary {
+    padding: 14px 18px; border-radius: 999px; font-size: 16px;
+    box-shadow: 0 10px 24px rgba(91,123,255,0.4);
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="title"><span class="dot"></span> Meds</div>
+      <div class="subtitle" id="subtitle">Your medication adherence, at a glance.</div>
+    </div>
+    <button class="btn icon ghost" id="menuBtn" title="Menu">⋯</button>
+  </header>
+
+  <div id="list" class="list"></div>
+
+  <div class="add-fab">
+    <button class="btn primary" id="addBtn">+ Add medication</button>
+  </div>
+
+  <footer>
+    Data stays on this device • <a href="#" id="exportBtn">Export</a> • <a href="#" id="importBtn">Import</a>
+  </footer>
+
+  <!-- Add/Edit modal -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2 id="modalTitle">Add medication</h2>
+      <div class="field">
+        <label for="mName">Name</label>
+        <input class="input" id="mName" placeholder="e.g. Ibuprofen" autocomplete="off" />
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label for="mDose">Dose (optional)</label>
+          <input class="input" id="mDose" placeholder="e.g. 200 mg" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="mInterval">Every (hours)</label>
+          <input class="input" id="mInterval" type="number" inputmode="decimal" min="0.5" step="0.5" placeholder="8" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Icon</label>
+        <div class="emoji-picker" id="emojiPicker"></div>
+      </div>
+      <div class="modal-actions">
+        <div class="left">
+          <button class="btn" id="deleteBtn" style="display:none; color: var(--bad);">Delete</button>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="cancelBtn">Cancel</button>
+          <button class="btn primary" id="saveBtn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // --- Storage ---------------------------------------------------------
+    const STORAGE_KEY = "meds.v1";
+    const EMOJIS = ["💊","💉","🧴","🩹","🧪","🫀","🌿","☀️","🌙","🧠","🦴","🩺"];
+
+    /** @typedef {{id:string, name:string, dose:string, intervalHours:number, emoji:string, lastTaken:number|null, history:number[]}} Med */
+
+    /** @returns {Med[]} */
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+      } catch { return []; }
+    }
+    function save(meds) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(meds));
+    }
+    function uid() {
+      return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    }
+
+    let meds = load();
+    let editingId = null;
+    let pickedEmoji = EMOJIS[0];
+
+    // --- Time helpers ----------------------------------------------------
+    function formatRelative(ms, { future = false } = {}) {
+      const abs = Math.abs(ms);
+      const s = Math.round(abs / 1000);
+      if (s < 60) return future ? `in ${s}s` : `${s}s ago`;
+      const m = Math.round(s / 60);
+      if (m < 60) return future ? `in ${m} min` : `${m} min ago`;
+      const h = Math.floor(m / 60);
+      const rm = m % 60;
+      if (h < 24) {
+        const core = rm === 0 ? `${h}h` : `${h}h ${rm}m`;
+        return future ? `in ${core}` : `${core} ago`;
+      }
+      const d = Math.floor(h / 24);
+      const rh = h % 24;
+      const core = rh === 0 ? `${d}d` : `${d}d ${rh}h`;
+      return future ? `in ${core}` : `${core} ago`;
+    }
+    function formatClock(ts) {
+      const d = new Date(ts);
+      const opts = { hour: "2-digit", minute: "2-digit" };
+      const today = new Date();
+      const sameDay = d.toDateString() === today.toDateString();
+      const y = new Date(today); y.setDate(y.getDate() - 1);
+      const yesterday = d.toDateString() === y.toDateString();
+      const time = d.toLocaleTimeString([], opts);
+      if (sameDay) return `today at ${time}`;
+      if (yesterday) return `yesterday at ${time}`;
+      return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) + ` at ${time}`;
+    }
+
+    // --- Rendering -------------------------------------------------------
+    const listEl = document.getElementById("list");
+    const subtitleEl = document.getElementById("subtitle");
+
+    function statusFor(med, now = Date.now()) {
+      if (!med.lastTaken) return { kind: "none", nextAt: null, pct: 0 };
+      const nextAt = med.lastTaken + med.intervalHours * 3600 * 1000;
+      const elapsed = now - med.lastTaken;
+      const total = med.intervalHours * 3600 * 1000;
+      const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+      let kind = "ok";
+      const remaining = nextAt - now;
+      if (remaining <= 0) kind = "due";
+      else if (remaining <= Math.min(30 * 60 * 1000, total * 0.15)) kind = "soon";
+      return { kind, nextAt, pct, remaining };
+    }
+
+    function render() {
+      if (meds.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty">
+            <h3>No medications yet</h3>
+            <div>Tap <b>Add medication</b> to start tracking your doses.</div>
+          </div>`;
+        updateSubtitle();
+        return;
+      }
+
+      const now = Date.now();
+      // sort: due first, then soon, then by next dose time, then alpha
+      const sorted = [...meds].sort((a, b) => {
+        const sa = statusFor(a, now), sb = statusFor(b, now);
+        const order = { due: 0, soon: 1, ok: 2, none: 3 };
+        if (order[sa.kind] !== order[sb.kind]) return order[sa.kind] - order[sb.kind];
+        if (sa.nextAt && sb.nextAt) return sa.nextAt - sb.nextAt;
+        return a.name.localeCompare(b.name);
+      });
+
+      listEl.innerHTML = sorted.map(m => cardHtml(m, now)).join("");
+      // bind actions
+      listEl.querySelectorAll("[data-take]").forEach(el => {
+        el.addEventListener("click", () => takeDose(el.dataset.take));
+      });
+      listEl.querySelectorAll("[data-edit]").forEach(el => {
+        el.addEventListener("click", () => openModal(el.dataset.edit));
+      });
+      listEl.querySelectorAll("[data-undo]").forEach(el => {
+        el.addEventListener("click", () => undoLast(el.dataset.undo));
+      });
+      updateSubtitle();
+    }
+
+    function cardHtml(m, now) {
+      const s = statusFor(m, now);
+      let pill = `<span class="pill">No doses yet</span>`;
+      let progressClass = "";
+      if (s.kind === "due") { pill = `<span class="pill bad">● Due now</span>`; progressClass = "bad"; }
+      else if (s.kind === "soon") { pill = `<span class="pill warn">● Due soon</span>`; progressClass = "warn"; }
+      else if (s.kind === "ok") { pill = `<span class="pill good">● On track</span>`; }
+
+      const last = m.lastTaken
+        ? `<div class="value">${formatRelative(now - m.lastTaken)}</div>
+           <div class="sub">${formatClock(m.lastTaken)}</div>`
+        : `<div class="value">—</div><div class="sub">not recorded</div>`;
+
+      const next = s.nextAt
+        ? (s.remaining <= 0
+            ? `<div class="value" style="color:var(--bad)">Now</div>
+               <div class="sub">overdue by ${formatRelative(-s.remaining).replace(" ago","")}</div>`
+            : `<div class="value">${formatRelative(s.remaining, { future: true })}</div>
+               <div class="sub">${formatClock(s.nextAt)}</div>`)
+        : `<div class="value">—</div><div class="sub">tap "Taken" to start</div>`;
+
+      const doseLine = m.dose ? `<div class="meta">${escapeHtml(m.dose)} · every ${fmtHours(m.intervalHours)}</div>`
+                              : `<div class="meta">Every ${fmtHours(m.intervalHours)}</div>`;
+
+      const undoBtn = m.lastTaken
+        ? `<button class="btn" data-undo="${m.id}" title="Undo last dose">↩︎</button>`
+        : "";
+
+      return `
+        <div class="card">
+          <div class="row1">
+            <div class="name">
+              <span class="emoji">${m.emoji || "💊"}</span>
+              <span class="text">${escapeHtml(m.name)}</span>
+            </div>
+            ${pill}
+          </div>
+          ${doseLine}
+          <div class="progress ${progressClass}"><span style="width:${Math.min(100, s.pct || 0)}%"></span></div>
+          <div class="status">
+            <div class="box">
+              <div class="label">Last taken</div>
+              ${last}
+            </div>
+            <div class="box">
+              <div class="label">Next dose</div>
+              ${next}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary take" data-take="${m.id}">✓ Mark taken</button>
+            ${undoBtn}
+            <button class="btn" data-edit="${m.id}" title="Edit">✎</button>
+          </div>
+        </div>`;
+    }
+
+    function updateSubtitle() {
+      if (meds.length === 0) { subtitleEl.textContent = "Your medication adherence, at a glance."; return; }
+      const now = Date.now();
+      const due = meds.filter(m => { const s = statusFor(m, now); return s.kind === "due"; }).length;
+      const soon = meds.filter(m => { const s = statusFor(m, now); return s.kind === "soon"; }).length;
+      if (due > 0) subtitleEl.textContent = `${due} med${due>1?"s":""} due now${soon?`, ${soon} soon`:""}`;
+      else if (soon > 0) subtitleEl.textContent = `${soon} med${soon>1?"s":""} due soon`;
+      else subtitleEl.textContent = `${meds.length} med${meds.length>1?"s":""} tracked • all on track`;
+    }
+
+    function fmtHours(h) {
+      if (h < 1) return `${Math.round(h * 60)} min`;
+      if (h === 24) return "day";
+      if (h === 12) return "12h";
+      if (h % 24 === 0) return `${h/24} day${h/24>1?"s":""}`;
+      if (Number.isInteger(h)) return `${h}h`;
+      return `${h}h`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    }
+
+    // --- Actions ---------------------------------------------------------
+    function takeDose(id) {
+      const m = meds.find(x => x.id === id);
+      if (!m) return;
+      const ts = Date.now();
+      m.lastTaken = ts;
+      m.history = m.history || [];
+      m.history.push(ts);
+      if (m.history.length > 100) m.history = m.history.slice(-100);
+      save(meds);
+      render();
+      toast(`${m.emoji || "💊"} ${m.name} marked as taken`);
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+
+    function undoLast(id) {
+      const m = meds.find(x => x.id === id);
+      if (!m || !m.lastTaken) return;
+      m.history = m.history || [];
+      m.history.pop();
+      m.lastTaken = m.history.length ? m.history[m.history.length - 1] : null;
+      save(meds);
+      render();
+      toast(`Undid last dose of ${m.name}`);
+    }
+
+    // --- Modal -----------------------------------------------------------
+    const modalBg = document.getElementById("modalBg");
+    const modalTitle = document.getElementById("modalTitle");
+    const mName = document.getElementById("mName");
+    const mDose = document.getElementById("mDose");
+    const mInterval = document.getElementById("mInterval");
+    const emojiPicker = document.getElementById("emojiPicker");
+    const deleteBtn = document.getElementById("deleteBtn");
+
+    function renderEmojiPicker() {
+      emojiPicker.innerHTML = EMOJIS.map(e =>
+        `<button type="button" data-e="${e}" class="${e===pickedEmoji?"sel":""}">${e}</button>`).join("");
+      emojiPicker.querySelectorAll("button").forEach(b => {
+        b.addEventListener("click", () => {
+          pickedEmoji = b.dataset.e;
+          renderEmojiPicker();
+        });
+      });
+    }
+
+    function openModal(id) {
+      editingId = id || null;
+      if (id) {
+        const m = meds.find(x => x.id === id);
+        if (!m) return;
+        modalTitle.textContent = "Edit medication";
+        mName.value = m.name;
+        mDose.value = m.dose || "";
+        mInterval.value = m.intervalHours;
+        pickedEmoji = m.emoji || EMOJIS[0];
+        deleteBtn.style.display = "";
+      } else {
+        modalTitle.textContent = "Add medication";
+        mName.value = "";
+        mDose.value = "";
+        mInterval.value = "8";
+        pickedEmoji = EMOJIS[0];
+        deleteBtn.style.display = "none";
+      }
+      renderEmojiPicker();
+      modalBg.classList.add("open");
+      setTimeout(() => mName.focus(), 50);
+    }
+    function closeModal() {
+      modalBg.classList.remove("open");
+      editingId = null;
+    }
+
+    document.getElementById("addBtn").addEventListener("click", () => openModal(null));
+    document.getElementById("cancelBtn").addEventListener("click", closeModal);
+    modalBg.addEventListener("click", (e) => { if (e.target === modalBg) closeModal(); });
+
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      const name = mName.value.trim();
+      const dose = mDose.value.trim();
+      const interval = parseFloat(mInterval.value);
+      if (!name) { mName.focus(); return toast("Give it a name"); }
+      if (!(interval > 0)) { mInterval.focus(); return toast("Set a valid interval"); }
+
+      if (editingId) {
+        const m = meds.find(x => x.id === editingId);
+        if (m) {
+          m.name = name; m.dose = dose; m.intervalHours = interval; m.emoji = pickedEmoji;
+        }
+      } else {
+        meds.push({
+          id: uid(),
+          name, dose, intervalHours: interval, emoji: pickedEmoji,
+          lastTaken: null, history: []
+        });
+      }
+      save(meds);
+      closeModal();
+      render();
+    });
+
+    deleteBtn.addEventListener("click", () => {
+      if (!editingId) return;
+      const m = meds.find(x => x.id === editingId);
+      if (!m) return;
+      if (!confirm(`Delete "${m.name}"? This removes its history too.`)) return;
+      meds = meds.filter(x => x.id !== editingId);
+      save(meds);
+      closeModal();
+      render();
+      toast("Medication deleted");
+    });
+
+    // --- Menu / export / import -----------------------------------------
+    document.getElementById("menuBtn").addEventListener("click", () => {
+      const now = Date.now();
+      const lines = meds.map(m => {
+        const s = statusFor(m, now);
+        const last = m.lastTaken ? formatClock(m.lastTaken) : "never";
+        const next = s.nextAt ? formatClock(s.nextAt) : "—";
+        return `• ${m.emoji} ${m.name}${m.dose?` (${m.dose})`:""}\n   last: ${last}\n   next: ${next}`;
+      }).join("\n\n") || "No meds yet.";
+      alert(`Meds summary\n\n${lines}`);
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      const blob = new Blob([JSON.stringify(meds, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `meds-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("importBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "application/json";
+      inp.onchange = () => {
+        const f = inp.files?.[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            const parsed = JSON.parse(String(r.result));
+            if (!Array.isArray(parsed)) throw new Error("bad file");
+            if (!confirm("Replace current medications with imported data?")) return;
+            meds = parsed;
+            save(meds); render();
+            toast("Imported");
+          } catch { toast("Import failed"); }
+        };
+        r.readAsText(f);
+      };
+      inp.click();
+    });
+
+    // --- Toast -----------------------------------------------------------
+    let toastTimer;
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+    }
+
+    // --- Tick ------------------------------------------------------------
+    render();
+    setInterval(render, 30 * 1000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+
+    // Seed a helpful example the first time ever
+    if (meds.length === 0 && !localStorage.getItem("meds.seeded")) {
+      localStorage.setItem("meds.seeded", "1");
+    }
+  </script>
+</body>
+</html>
