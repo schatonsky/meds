@@ -7,7 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Meds" />
-<link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Meds%22%2C%22short_name%22%3A%22Meds%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230b1020%22%2C%22theme_color%22%3A%22%230b1020%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bcharset%3Dutf-8%2C%253Csvg%2520xmlns%253D%2522http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2522%2520viewBox%253D%25220%25200%2520192%2520192%2522%253E%253Crect%2520width%253D%2522192%2522%2520height%253D%2522192%2522%2520rx%253D%252240%2522%2520fill%253D%2522%25230b1020%2522%252F%253E%253Ctext%2520x%253D%252296%2522%2520y%253D%2522128%2522%2520font-size%253D%252296%2522%2520text-anchor%253D%2522middle%2522%2520fill%253D%2522%2523fff%2522%253E%25E2%259C%2585%253C%252Ftext%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D" />
+<link rel="apple-touch-icon" href="icon.jpg" />
+<link rel="icon" type="image/jpeg" href="icon.jpg" />
+<link rel="manifest" href="manifest.webmanifest" />
 <title>Meds — adherence tracker</title>
 <style>
   :root {
@@ -209,6 +211,17 @@
     font-size: 16px; /* prevents iOS zoom */
     font-family: inherit;
   }
+  textarea.input { resize: vertical; min-height: 44px; line-height: 1.4; }
+  .notes {
+    font-size: 13px; color: var(--muted);
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 8px 10px;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
   .input:focus, .select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 0; }
   .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .modal-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 4px; }
@@ -291,6 +304,10 @@
       <div class="field">
         <label>Icon</label>
         <div class="emoji-picker" id="emojiPicker"></div>
+      </div>
+      <div class="field">
+        <label for="mNotes">Notes (optional)</label>
+        <textarea class="input" id="mNotes" rows="2" placeholder="e.g. Take with food, avoid alcohol" autocomplete="off"></textarea>
       </div>
       <div class="modal-actions">
         <div class="left">
@@ -441,6 +458,8 @@
       const doseLine = m.dose ? `<div class="meta">${escapeHtml(m.dose)} · every ${fmtHours(m.intervalHours)}</div>`
                               : `<div class="meta">Every ${fmtHours(m.intervalHours)}</div>`;
 
+      const notesLine = m.notes ? `<div class="notes">${escapeHtml(m.notes)}</div>` : "";
+
       const undoBtn = m.lastTaken
         ? `<button class="btn" data-undo="${m.id}" title="Undo last dose">↩︎</button>`
         : "";
@@ -455,6 +474,7 @@
             ${pill}
           </div>
           ${doseLine}
+          ${notesLine}
           <div class="progress ${progressClass}"><span style="width:${Math.min(100, s.pct || 0)}%"></span></div>
           <div class="status">
             <div class="box">
@@ -529,6 +549,7 @@
     const mName = document.getElementById("mName");
     const mDose = document.getElementById("mDose");
     const mInterval = document.getElementById("mInterval");
+    const mNotes = document.getElementById("mNotes");
     const emojiPicker = document.getElementById("emojiPicker");
     const deleteBtn = document.getElementById("deleteBtn");
 
@@ -552,6 +573,7 @@
         mName.value = m.name;
         mDose.value = m.dose || "";
         mInterval.value = m.intervalHours;
+        mNotes.value = m.notes || "";
         pickedEmoji = m.emoji || EMOJIS[0];
         deleteBtn.style.display = "";
       } else {
@@ -559,6 +581,7 @@
         mName.value = "";
         mDose.value = "";
         mInterval.value = "8";
+        mNotes.value = "";
         pickedEmoji = EMOJIS[0];
         deleteBtn.style.display = "none";
       }
@@ -578,6 +601,7 @@
     document.getElementById("saveBtn").addEventListener("click", () => {
       const name = mName.value.trim();
       const dose = mDose.value.trim();
+      const notes = mNotes.value.trim();
       const interval = parseFloat(mInterval.value);
       if (!name) { mName.focus(); return toast("Give it a name"); }
       if (!(interval > 0)) { mInterval.focus(); return toast("Set a valid interval"); }
@@ -585,12 +609,12 @@
       if (editingId) {
         const m = meds.find(x => x.id === editingId);
         if (m) {
-          m.name = name; m.dose = dose; m.intervalHours = interval; m.emoji = pickedEmoji;
+          m.name = name; m.dose = dose; m.intervalHours = interval; m.emoji = pickedEmoji; m.notes = notes;
         }
       } else {
         meds.push({
           id: uid(),
-          name, dose, intervalHours: interval, emoji: pickedEmoji,
+          name, dose, intervalHours: interval, emoji: pickedEmoji, notes,
           lastTaken: null, history: []
         });
       }
