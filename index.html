@@ -155,6 +155,9 @@
     border-radius: 12px;
     padding: 10px 12px;
   }
+  .status .box.clickable { cursor: pointer; }
+  .status .box.clickable:active { background: color-mix(in srgb, var(--accent) 10%, var(--card-2)); }
+  .status .box .hint { font-size: 10px; color: var(--muted); margin-top: 4px; opacity: 0.7; }
   .status .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
   .status .value { font-weight: 700; font-size: 15px; margin-top: 2px; }
   .status .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -321,6 +324,26 @@
     </div>
   </div>
 
+  <!-- Time picker modal -->
+  <div class="modal-bg" id="timeBg">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2 id="timeTitle">When was it taken?</h2>
+      <div class="field">
+        <label for="mTime">Date &amp; time</label>
+        <input class="input" id="mTime" type="datetime-local" />
+      </div>
+      <div class="modal-actions">
+        <div class="left">
+          <button class="btn" id="timeClearBtn" style="color: var(--bad);">Clear</button>
+        </div>
+        <div class="right">
+          <button class="btn ghost" id="timeCancelBtn">Cancel</button>
+          <button class="btn primary" id="timeSaveBtn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -431,6 +454,9 @@
       listEl.querySelectorAll("[data-undo]").forEach(el => {
         el.addEventListener("click", () => undoLast(el.dataset.undo));
       });
+      listEl.querySelectorAll("[data-settime]").forEach(el => {
+        el.addEventListener("click", () => openTimeModal(el.dataset.settime));
+      });
       updateSubtitle();
     }
 
@@ -477,9 +503,10 @@
           ${notesLine}
           <div class="progress ${progressClass}"><span style="width:${Math.min(100, s.pct || 0)}%"></span></div>
           <div class="status">
-            <div class="box">
+            <div class="box clickable" data-settime="${m.id}" title="Tap to adjust">
               <div class="label">Last taken</div>
               ${last}
+              <div class="hint">tap to edit</div>
             </div>
             <div class="box">
               <div class="label">Next dose</div>
@@ -633,6 +660,72 @@
       closeModal();
       render();
       toast("Medication deleted");
+    });
+
+    // --- Time picker -----------------------------------------------------
+    const timeBg = document.getElementById("timeBg");
+    const mTime = document.getElementById("mTime");
+    const timeTitle = document.getElementById("timeTitle");
+    let timeEditingId = null;
+
+    function toLocalInputValue(date) {
+      const pad = n => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function openTimeModal(id) {
+      const m = meds.find(x => x.id === id);
+      if (!m) return;
+      timeEditingId = id;
+      timeTitle.textContent = `When did you take ${m.name}?`;
+      const base = m.lastTaken ? new Date(m.lastTaken) : new Date();
+      mTime.value = toLocalInputValue(base);
+      mTime.max = toLocalInputValue(new Date());
+      timeBg.classList.add("open");
+    }
+    function closeTimeModal() {
+      timeBg.classList.remove("open");
+      timeEditingId = null;
+    }
+
+    timeBg.addEventListener("click", (e) => { if (e.target === timeBg) closeTimeModal(); });
+    document.getElementById("timeCancelBtn").addEventListener("click", closeTimeModal);
+
+    document.getElementById("timeSaveBtn").addEventListener("click", () => {
+      if (!timeEditingId) return;
+      const m = meds.find(x => x.id === timeEditingId);
+      if (!m) return;
+      const val = mTime.value;
+      if (!val) { return toast("Pick a date and time"); }
+      const ts = new Date(val).getTime();
+      if (isNaN(ts)) { return toast("Invalid date"); }
+      if (ts > Date.now()) { return toast("Can't be in the future"); }
+
+      // Replace the most recent history entry (or append if no history yet)
+      m.history = m.history || [];
+      if (m.lastTaken && m.history.length && m.history[m.history.length - 1] === m.lastTaken) {
+        m.history[m.history.length - 1] = ts;
+      } else {
+        m.history.push(ts);
+      }
+      m.history.sort((a, b) => a - b);
+      m.lastTaken = ts;
+      save(meds);
+      closeTimeModal();
+      render();
+      toast(`Updated — ${m.name} last taken ${formatRelative(Date.now() - ts)}`);
+    });
+
+    document.getElementById("timeClearBtn").addEventListener("click", () => {
+      if (!timeEditingId) return;
+      const m = meds.find(x => x.id === timeEditingId);
+      if (!m) return;
+      if (!confirm(`Clear last dose for ${m.name}?`)) return;
+      m.lastTaken = null;
+      m.history = [];
+      save(meds);
+      closeTimeModal();
+      render();
     });
 
     // --- Menu / export / import -----------------------------------------
